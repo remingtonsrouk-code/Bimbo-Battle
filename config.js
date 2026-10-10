@@ -6,7 +6,7 @@ window.DESK_CONFIG = {
   rosterCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7rUXu8q8Cpu3pCf-9LMyvYXZfhTp74NdWGxDSAc_Fz7gUEFIC_YfMFxu3ghPGYA/pub?gid=1601317079&single=true&output=csv",
 
   // Optional: the Settings tab published as CSV. Leave "" to use the defaults below.
-  settingsCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7rUXu8q8Cpu3pCf-9LMyvYXZfhTp74NdWGxDSAc_Fz7gUEFIC_YfMFxu3ghPGYA/pub?gid=878028811&single=true&output=csv",
+  settingsCsvUrl: "",
 
   // Used when there's no Settings tab, or a setting is missing from it.
   defaults: {
