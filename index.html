@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ringside Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Ringside <span>Desk</span></div>
+    <span class="phase-chip" id="phaseChip">Regular season</span>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-fight" data-tab="fight" aria-selected="true">Fights</button>
+      <button role="tab" id="tab-roster" data-tab="roster" aria-selected="false">Roster</button>
+      <button role="tab" id="tab-results" data-tab="results" aria-selected="false">Results</button>
+      <button role="tab" id="tab-rules" data-tab="rules" aria-selected="false">Rules</button>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div id="banner" class="banner" hidden></div>
+  <main id="main"><div class="empty" style="margin-top:20px">Loading the roster…</div></main>
+</div>
+<div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+<script src="config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/sheet.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
