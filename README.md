@@ -29,8 +29,9 @@ A fight table for the league. Players pick two fighters, choose a skill and trai
 | Name | Fighter's name. Required | `#7` |
 | Stable | Team name. Blank shows as Unassigned | `House 2` |
 | Size | Size band 1–5, used by Massive | `3` |
-| Style | One style from the Lists tab | `Titboxer` |
-| Style Tier | I, II or III | `II` |
+| Style | Every style she owns, each with its tier, separated by semicolons. In a fight she gets the bonus from her best style for that match type | `Titboxer III; Titfighter I; Amazon I` |
+| Style Tier | Only needed when Style holds a single style with no tier written | `II` |
+| Preferred Match | The match type she picks when she sets it, from those her styles cover. Also decides which condition she takes when she loses. Blank uses her first style's match | `Titfight` |
 | Traits | Separate with semicolons. Add a tier only where it matters | `Conditioning II; Massive` |
 | Skills | Separate with semicolons, each with its tier. Finisher has no tier | `Bash II; Slam I; Finisher` |
 | Integrity | Current integrity | `54` |
@@ -106,7 +107,8 @@ Check GitHub's acceptable-use policies for what art can be hosted on GitHub Page
 ## Rules the desk applies
 
 - Per fight, Amateurs bring up to 3 skills and 1 trait, Veterans 5 and 2, Warmaids 7 and 3. The style counts as one of the skills.
-- Moves stack with styles.
+- Moves stack with styles. Each style a fighter brings into a fight uses one of her skill slots, and she gets the bonus from her best style for that match type.
+- Amazon covers Titboxing and Titfight, Harpy covers Titboxing and Sexfight, Siren covers Nipple Duel and Titfight, Nymph covers Nipple Duel and Sexfight, and Champion gives +3 in every match. Foxy Boxer and the Boxing match type have been retired.
 - Bulging, Stiff Tips and Thirsty give +1 on every matching roll. Conditioning gives +10 maximum integrity per tier.
 - Conditions are tied to the loser's preferred match type, give −2 on matching rolls, and clear after her next fight or 6 recoveries.
 - Base condition chance is 10%.

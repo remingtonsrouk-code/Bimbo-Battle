@@ -1,12 +1,12 @@
 // ===== Rules engine (pure; no DOM) =====
-const MATCH_TAG = { "Titboxing": "Batter", "Boxing": "Batter", "Titfight": "Squeeze", "Nipple Duel": "Fence", "Sexfight": "Erotic" };
+const MATCH_TAG = { "Titboxing": "Batter", "Titfight": "Squeeze", "Nipple Duel": "Fence", "Sexfight": "Erotic" };
 const MATCH_TYPES = Object.keys(MATCH_TAG);
 const STYLES = {
-  "Titboxer": ["Titboxing"], "Foxy Boxer": ["Boxing"], "Titfighter": ["Titfight"], "Duelist": ["Nipple Duel"],
-  "Sexfighter": ["Sexfight"], "Amazon": ["Boxing", "Titfight"], "Harpy": ["Boxing", "Sexfight"],
+  "Titboxer": ["Titboxing"], "Titfighter": ["Titfight"], "Duelist": ["Nipple Duel"],
+  "Sexfighter": ["Sexfight"], "Amazon": ["Titboxing", "Titfight"], "Harpy": ["Titboxing", "Sexfight"],
   "Siren": ["Nipple Duel", "Titfight"], "Nymph": ["Nipple Duel", "Sexfight"], "Champion": MATCH_TYPES.slice()
 };
-const PREF_COND = { "Titboxing": "Busted", "Boxing": "Busted", "Titfight": "Crushed", "Nipple Duel": "Softened", "Sexfight": "Over Stimulated" };
+const PREF_COND = { "Titboxing": "Busted", "Titfight": "Crushed", "Nipple Duel": "Softened", "Sexfight": "Over Stimulated" };
 const COND_TAG = { "Busted": "Batter", "Crushed": "Squeeze", "Softened": "Fence", "Over Stimulated": "Erotic" };
 const COND_PENALTY = 2;
 const ROMAN = ["", "I", "II", "III", "IV"];
@@ -43,19 +43,40 @@ function maxIntegrity(f) {
   for (const t of f.traits || []) if (t.name === "Conditioning") m += 10 * (t.tier || 1);
   return m;
 }
-function styleMatches(style, match) { return !!style && (STYLES[style] || []).includes(match); }
-function styleBonus(build, match) {
-  if (!styleMatches(build.style, match)) return 0;
-  return build.style === "Champion" ? 3 : (build.styleTier || 1);
+/** Every style a fighter owns: [{name, tier}]. Older single-style records still work. */
+function stylesOf(build) {
+  if (build.styles && build.styles.length) return build.styles;
+  return build.style ? [{ name: build.style, tier: build.styleTier || 1 }] : [];
 }
-function prefMatch(build) { return (STYLES[build.style] || ["Titboxing"])[0]; }
+function styleValue(st) { return st.name === "Champion" ? 3 : (st.tier || 1); }
+function styleLabel(st) { return st.name === "Champion" ? "Champion" : `${st.name} ${ROMAN[st.tier || 1]}`; }
+/** The best style that applies in this match, limited to styles brought into the fight when a loadout is given. */
+function bestStyle(build, match, loadoutSkills) {
+  let best = null;
+  for (const st of stylesOf(build)) {
+    if (loadoutSkills && !loadoutSkills.includes(st.name)) continue;
+    if (!(STYLES[st.name] || []).includes(match)) continue;
+    if (!best || styleValue(st) > styleValue(best)) best = st;
+  }
+  return best;
+}
+function styleBonus(build, match, loadoutSkills) { const b = bestStyle(build, match, loadoutSkills); return b ? styleValue(b) : 0; }
+/** Match types any of her styles cover. */
+function matchesOf(build) { const set = new Set(); stylesOf(build).forEach(st => (STYLES[st.name] || []).forEach(m => set.add(m))); return MATCH_TYPES.filter(m => set.has(m)); }
+/** Her preferred match: the one the fighter chose, if her styles cover it, else her first style's first match. */
+function prefMatch(build) {
+  const ok = matchesOf(build);
+  if (build.preferredMatch && ok.includes(build.preferredMatch)) return build.preferredMatch;
+  return ok[0] || "Titboxing";
+}
+function isChampion(build) { return stylesOf(build).some(st => st.name === "Champion"); }
 function prefCondition(build) { return PREF_COND[prefMatch(build)] || "Busted"; }
 function d(n, rng) { return 1 + Math.floor(rng() * n); }
 
 /** Skills this side may pick this exchange. */
 function skillOptions(fight, s) {
   const side = fight.sides[s], st = fight.state;
-  return side.loadout.skills.filter(n => n !== side.build.style).map(n => {
+  return side.loadout.skills.filter(n => !STYLES[n]).map(n => {
     const def = SKILLS[n]; if (!def) return null;
     let ok = !st.used[s].includes(n), why = ok ? "" : "Used";
     if (ok && def.needs === "combo1" && !["Flick", "Rub", "Tease"].includes(st.prev[s])) { ok = false; why = "Needs Combo 1 first"; }
@@ -95,8 +116,8 @@ function rollSide(fight, picks, s, rng) {
     }
   }
   const add = (label, v) => { if (v) parts.push([label, v]); };
-  if (me.loadout.skills.includes(me.build.style))
-    add(`${me.build.style} ${me.build.style === "Champion" ? "" : ROMAN[me.build.styleTier || 1]}`.trim(), styleBonus(me.build, match));
+  const myStyle = bestStyle(me.build, match, me.loadout.skills);
+  if (myStyle) add(styleLabel(myStyle), styleValue(myStyle));
   if (skill) {
     st.used[s].push(skill);
     const L = `${skill} ${ROMAN[T]}`;
@@ -244,10 +265,10 @@ function resolveExchange(fight, picks, rng) {
 
 function finisherEnd(fight, R, atk, down, lines, how) {
   const C = i => fight.sides[i].corner, b = fight.sides[atk].build;
-  const top = tierOf(b) === "Warmaid" || b.style === "Champion";
+  const top = tierOf(b) === "Warmaid" || isChampion(b);
   lines.push(`${C(atk)} uses a Finisher: ${C(down)} is defeated.`);
   let extra;
-  if (top) { extra = { loserOutcome: "B-KO", bkoByFinisher: true }; lines.push(`${b.style === "Champion" ? "Champion" : "Warmaid"} Finisher: automatic B-KO.`); }
+  if (top) { extra = { loserOutcome: "B-KO", bkoByFinisher: true }; lines.push(`${isChampion(b) ? "Champion" : "Warmaid"} Finisher: automatic B-KO.`); }
   else if (R[atk].nat !== null && R[atk].nat >= fight.rules.bkoNat) { extra = { loserOutcome: "B-KO", bkoByDie: true }; lines.push(`Natural ${R[atk].nat} on the deciding roll: B-KO.`); }
   else { const cr = conditionRoll(fight, down, R[atk].tags, fight._rng || Math.random); extra = { conditionRoll: cr, loserOutcome: cr.out }; lines.push("Finisher: the condition roll is guaranteed."); lines.push(condLine(fight, down, cr)); }
   finish(fight, atk, how || "Finisher", extra);
@@ -298,4 +319,4 @@ function answerPending(fight, keepFighting) {
   return [`${C(down)} concedes. No condition chance.`];
 }
 
-if (typeof module !== "undefined") module.exports = { resolveExchange, answerPending, newFightState, skillOptions, maxIntegrity, tierOf, prefCondition, prefMatch, styleBonus, SKILLS, TRAITS, STYLES, MATCH_TYPES, TIER_LIMITS };
+if (typeof module !== "undefined") module.exports = { stylesOf, bestStyle, matchesOf, styleLabel, isChampion, resolveExchange, answerPending, newFightState, skillOptions, maxIntegrity, tierOf, prefCondition, prefMatch, styleBonus, SKILLS, TRAITS, STYLES, MATCH_TYPES, TIER_LIMITS };

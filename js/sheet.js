@@ -46,7 +46,7 @@ function rowsToFighters(rows) {
   const col = (...names) => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
   const C = {
     name: col("name", "fighter"), stable: col("stable", "team"), size: col("size", "sizeband"), style: col("style"),
-    styleTier: col("styletier", "tier"), traits: col("traits", "trait"), skills: col("skills", "skill"),
+    styleTier: col("styletier", "tier"), pref: col("preferredmatch", "preferred", "prefers"), traits: col("traits", "trait"), skills: col("skills", "skill"),
     integrity: col("integrity", "breastintegrity", "breasthealth", "health"), conditions: col("conditions", "condition"),
     bko: col("bko"), xp: col("xp", "experience", "xptospend"), life: col("lifetimexp", "lifetime"),
     wins: col("wins", "w"), losses: col("losses", "l"), last: col("lastresult", "last"), art: col("art", "image", "picture"), notes: col("notes")
@@ -56,11 +56,28 @@ function rowsToFighters(rows) {
   rows.slice(1).forEach((r, idx) => {
     const name = get(r, "name"); if (!name) return;
     const warn = [];
-    // style
-    let st = splitTier(get(r, "style"));
-    let style = canon(st.name, Object.keys(STYLES));
-    if (!style) { warn.push(`Style "${get(r, "style") || "blank"}" not recognised; using Titboxer.`); style = "Titboxer"; }
-    const styleTier = get(r, "styleTier") ? Math.min(3, Math.max(1, intOr(ROMAN_IN[get(r, "styleTier").toLowerCase()] || get(r, "styleTier"), 1))) : st.tier;
+    // styles: one or more, e.g. "Titboxer III; Titfighter I; Amazon I"
+    const styles = [];
+    const rawStyles = items(get(r, "style"));
+    const tierCell = get(r, "styleTier");
+    for (const it of rawStyles) {
+      const t = splitTier(it), n = canon(t.name, Object.keys(STYLES));
+      if (!n) { warn.push(/foxy\s*boxer/i.test(it) ? `Foxy Boxer no longer exists; ignored. Use Titboxer.` : `Style "${it}" not recognised; ignored.`); continue; }
+      let tier = t.tier;
+      if (rawStyles.length === 1 && tierCell && !/\s(i{1,3}|iv|[1-4])$/i.test(it)) tier = intOr(ROMAN_IN[tierCell.toLowerCase()] || tierCell, 1);
+      if (styles.some(x => x.name === n)) { warn.push(`Style ${n} is listed twice; using the first.`); continue; }
+      styles.push({ name: n, tier: Math.min(3, Math.max(1, tier)) });
+    }
+    if (!styles.length) { warn.push(`No style recognised in "${get(r, "style") || "blank"}"; using Titboxer I.`); styles.push({ name: "Titboxer", tier: 1 }); }
+    const style = styles[0].name, styleTier = styles[0].tier;
+    let preferredMatch = "";
+    if (get(r, "pref")) {
+      const pm = canon(get(r, "pref"), MATCH_TYPES);
+      const covered = matchesOf({ styles });
+      if (!pm) warn.push(`Preferred match "${get(r, "pref")}" isn't a match type; using ${covered[0]}.`);
+      else if (!covered.includes(pm)) warn.push(`None of her styles cover ${pm}; using ${covered[0]}.`);
+      else preferredMatch = pm;
+    }
     const traits = [], skills = [], conditions = [];
     for (const it of items(get(r, "traits"))) { const t = splitTier(it), n = canon(t.name, Object.keys(TRAITS)); if (n) traits.push({ name: n, tier: t.tier }); else warn.push(`Trait "${it}" not recognised; ignored.`); }
     for (const it of items(get(r, "skills"))) { const t = splitTier(it), n = canon(t.name, Object.keys(SKILLS)); if (n) skills.push({ name: n, tier: t.tier }); else warn.push(`Skill "${it}" not recognised; ignored.`); }
@@ -72,7 +89,7 @@ function rowsToFighters(rows) {
     }
     const f = {
       id: "r" + (idx + 2), row: idx + 2, name, stable: get(r, "stable"), size: Math.min(5, Math.max(1, intOr(get(r, "size"), 3))),
-      style, styleTier, traits, skills, conditions, bko,
+      styles, style, styleTier, preferredMatch, traits, skills, conditions, bko,
       xp: intOr(get(r, "xp"), 0), lifetimeXp: intOr(get(r, "life"), intOr(get(r, "xp"), 0)),
       wins: intOr(get(r, "wins"), 0), losses: intOr(get(r, "losses"), 0),
       lastResult: /^w/i.test(get(r, "last")) ? "W" : /^l/i.test(get(r, "last")) ? "L" : "",

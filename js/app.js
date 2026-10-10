@@ -121,7 +121,10 @@ function renderFightEmpty() {
 }
 function defaultLoadout(f) {
   const tier = tierOf(f), [nSk, nTr] = TIER_LIMITS[tier];
-  return { skills: [f.style, ...f.skills.map(k => k.name).filter(n => n !== "Finisher" || tier !== "Amateur")].slice(0, nSk), traits: f.traits.map(t => t.name).slice(0, nTr) };
+  // styles that are her best option in at least one match type, then Finisher, then the rest
+  const useful = [...new Set(MATCH_TYPES.map(m => bestStyle(f, m)).filter(Boolean).map(st => st.name))];
+  const moves = f.skills.map(k => k.name).filter(n => n !== "Finisher" || tier !== "Amateur").sort((a, b) => (b === "Finisher") - (a === "Finisher"));
+  return { skills: [...useful, ...moves].slice(0, nSk), traits: f.traits.map(t => t.name).slice(0, nTr) };
 }
 function openSetup() {
   const avail = app.fighters.filter(f => !f.bko), red = avail[0], blue = avail[1];
@@ -137,17 +140,18 @@ function renderSetup() {
     h("select", { id: "setup-" + corner, onchange: e => { S[corner] = e.target.value; const f = fighterById(S[corner]); S.load[corner] = f ? defaultLoadout(f) : { skills: [], traits: [] }; render(); } },
       h("option", { value: "" }, "Choose a fighter"),
       sorted.map(f => h("option", { value: f.id, selected: S[corner] === f.id, disabled: f.bko },
-        `${f.name}${f.stable ? " · " + f.stable : ""} · ${f.style} ${ROMAN[f.styleTier]} · ${f.integrity}/${maxIntegrity(f)}${f.bko ? " · B-KO" : ""}`))));
+        `${f.name}${f.stable ? " · " + f.stable : ""} · ${stylesOf(f).map(styleLabel).join(", ")} · ${f.integrity}/${maxIntegrity(f)}${f.bko ? " · B-KO" : ""}`))));
   const loadoutBox = corner => {
     const f = fighterById(S[corner]); if (!f) return h("div", { class: "muted" }, "No fighter chosen.");
     const tier = tierOf(f), [nSk, nTr] = TIER_LIMITS[tier], L = S.load[corner];
     const toggle = (list, name, max) => { const i = list.indexOf(name); if (i >= 0) list.splice(i, 1); else if (list.length < max) list.push(name); render(); };
     return h("div", { class: "stack", style: "gap:8px" },
-      h("div", { class: "corner-head" }, artEl(f), h("div", { class: "label" }, `${tier}: up to ${nSk} skills (style counts as one) and ${nTr} trait${nTr > 1 ? "s" : ""}`)),
-      h("div", { class: "checks" }, [f.style, ...f.skills.map(k => k.name)].map(n => {
+      h("div", { class: "corner-head" }, artEl(f), h("div", { class: "label" }, `${tier}: up to ${nSk} skills (each style counts as one) and ${nTr} trait${nTr > 1 ? "s" : ""}`)),
+      h("div", { class: "checks" }, [...stylesOf(f).map(st => st.name), ...f.skills.map(k => k.name)].map(n => {
+        const st = stylesOf(f).find(x => x.name === n);
         const on = L.skills.includes(n), k = f.skills.find(x => x.name === n), locked = n === "Finisher" && tier === "Amateur";
         return h("label", { class: "check", title: locked ? "Finisher needs Veteran (16 lifetime XP)" : "" }, h("input", { type: "checkbox", checked: on, disabled: locked || (!on && L.skills.length >= nSk), onchange: () => toggle(L.skills, n, nSk) }),
-          n === f.style ? `Style: ${n} ${n === "Champion" ? "" : ROMAN[f.styleTier]}` : n === "Finisher" ? `Finisher${locked ? " (needs Veteran)" : ""}` : `${n} ${ROMAN[(k && k.tier) || 1]}`);
+          st ? `Style: ${styleLabel(st)}` : n === "Finisher" ? `Finisher${locked ? " (needs Veteran)" : ""}` : `${n} ${ROMAN[(k && k.tier) || 1]}`);
       })),
       f.traits.length ? h("div", { class: "checks" }, f.traits.map(t => {
         const on = L.traits.includes(t.name);
@@ -158,7 +162,9 @@ function renderSetup() {
   const coin = () => {
     const c = Math.random() < 0.5 ? "red" : "blue", f = fighterById(S[c]);
     if (!f) { toast("Choose both fighters first."); return; }
-    S.match = prefMatch(f); render(); toast(`Coin flip: ${c === "red" ? "Red" : "Blue"} sets the match type. ${S.match}.`);
+    S.match = prefMatch(f); render();
+    const opts = matchesOf(f);
+    toast(`Coin flip: ${c === "red" ? "Red" : "Blue"} sets the match type. Her preferred is ${S.match}${opts.length > 1 ? `; she can switch to ${opts.filter(m => m !== S.match).join(" or ")}` : ""}.`);
   };
   const ready = S.red && S.blue && S.red !== S.blue;
   return h("div", { class: "card stack" },
@@ -179,7 +185,7 @@ function renderSetup() {
 }
 function startFight() {
   const S = app.setup, fr = fighterById(S.red), fb = fighterById(S.blue); if (!fr || !fb) return;
-  const snap = f => ({ name: f.name, stable: f.stable, style: f.style, styleTier: f.styleTier, traits: clone(f.traits), skills: clone(f.skills), size: f.size,
+  const snap = f => ({ name: f.name, stable: f.stable, style: f.style, styleTier: f.styleTier, styles: clone(stylesOf(f)), preferredMatch: f.preferredMatch || "", traits: clone(f.traits), skills: clone(f.skills), size: f.size,
     conditions: clone(f.conditions), integrity: Math.min(f.integrity, maxIntegrity(f)), maxIntegrity: maxIntegrity(f), lifetimeXp: f.lifetimeXp, art: f.art, row: f.row });
   const sides = [{ corner: "Red", build: snap(fr), loadout: clone(S.load.red) }, { corner: "Blue", build: snap(fb), loadout: clone(S.load.blue) }];
   const r = rulesFor(S.phase);
@@ -204,8 +210,9 @@ function renderFight(f) {
 }
 function renderCorner(f, s) {
   const side = f.sides[s], b = side.build, st = f.state;
-  const styleOn = side.loadout.skills.includes(b.style), bonus = styleBonus(b, f.matchType);
-  const styleNote = !styleOn ? "style not brought" : bonus ? `+${bonus} every roll` : "no bonus in this match";
+  const brought = stylesOf(b).filter(st => side.loadout.skills.includes(st.name)), best = bestStyle(b, f.matchType, side.loadout.skills);
+  const styleOn = !!best;
+  const styleNote = !brought.length ? "no style brought" : best ? `${styleLabel(best)} · +${styleValue(best)} every roll` : `${brought.map(styleLabel).join(", ")} · no bonus in this match`;
   const opts = skillOptions(f, s), p = f.picks[s];
   const traits = side.loadout.traits.filter(t => t !== "Conditioning");
   const live = f.status !== "done" && !st.pending;
@@ -214,7 +221,7 @@ function renderCorner(f, s) {
       h("div", { class: "corner-name" }, h("span", { class: "tag" }, side.corner), h("span", { class: "who" }, b.name), b.stable ? h("span", { class: "muted" }, b.stable) : null)),
     meter(st.bi[s], st.max[s]),
     h("div", { class: "chips" },
-      h("span", { class: "chip" }, `${b.style} ${b.style === "Champion" ? "" : ROMAN[b.styleTier]} · ${styleNote}`),
+      h("span", { class: "chip" }, styleNote),
       side.loadout.traits.map(t => h("span", { class: "chip", title: (TRAITS[t] || {}).text || "" }, t)),
       st.sore[s] ? h("span", { class: "chip bad" }, `Sore ${ROMAN[Math.min(st.sore[s], 4)]}`) : null,
       condNames(b.conditions).map(c => h("span", { class: "chip warn", title: c === "Humiliated" ? "−5 only in an unavoidable rematch; use the writer's modifier" : "−2 on matching rolls" }, c)),
@@ -386,7 +393,8 @@ function fighterCard(f) {
     h("div", { class: "f-top" }, h("span", { class: "f-name" }, f.name), h("span", { class: "chips" }, f.bko ? h("span", { class: "chip bad" }, "B-KO") : null, h("span", { class: "chip gold" }, tierOf(f)))),
     meter(f.integrity, max),
     h("dl", { class: "kv" },
-      h("dt", {}, "Style"), h("dd", {}, `${f.style} ${f.style === "Champion" ? "" : ROMAN[f.styleTier]} · prefers ${prefMatch(f)}`),
+      h("dt", {}, stylesOf(f).length > 1 ? "Styles" : "Style"), h("dd", {}, stylesOf(f).map(styleLabel).join(", ")),
+      h("dt", {}, "Prefers"), h("dd", {}, `${prefMatch(f)}${matchesOf(f).length > 1 ? ` (covers ${matchesOf(f).join(", ")})` : ""}`),
       h("dt", {}, "Traits"), h("dd", {}, f.traits.map(t => t.name + (t.name === "Conditioning" ? " " + ROMAN[t.tier] : "")).join(", ") || "None"),
       h("dt", {}, "Skills"), h("dd", {}, f.skills.map(k => k.name === "Finisher" ? "Finisher" : `${k.name} ${ROMAN[k.tier]}`).join(", ") || "None"),
       h("dt", {}, "Record"), h("dd", { class: "num" }, `${f.wins}–${f.losses}${f.lastResult ? " · last " + (f.lastResult === "W" ? "win" : "loss") : ""}`),
@@ -440,7 +448,7 @@ function renderRules() {
         h("p", { class: "source-line" }, CFG.settingsCsvUrl ? "From the Settings tab of the league sheet." : "From config.js.")),
       card("Each roll", h("ul", {},
         h("li", {}, "Both corners roll a d10 every exchange, up to 15 rolls. Each result comes off the opponent's integrity."),
-        h("li", {}, "Per roll: one skill, one trait and one lingering condition. Your style always applies in a matching match type and stacks with a skill."),
+        h("li", {}, "Per roll: one skill, one trait and one lingering condition. Your best style for the match type always applies and stacks with a skill. Each style you bring uses a skill slot."),
         h("li", {}, "A natural 10 is a Double Tap: roll again and add. Another 10 is a Triple Tap. Two Double Taps per fight, and only one can become a Triple."),
         h("li", {}, "A roll's tags are the match type's tag plus the skill's tag. Traits and conditions key off those tags."),
         h("li", {}, "The writer's modifier covers anything the desk doesn't model, such as Humiliated in an unavoidable rematch."))),
