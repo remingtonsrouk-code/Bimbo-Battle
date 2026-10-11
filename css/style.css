@@ -171,3 +171,8 @@ textarea.out { width: 100%; min-height: 120px; font-family: var(--mono); font-si
 table.ref td.num { font-variant-numeric: tabular-nums; }
 
 .opt.finisher { border-color: var(--gold); }
+.art.fight { width: 112px; height: 150px; }
+.art.is-zero, .art.is-bko { border-color: var(--danger); }
+@media (max-width: 420px) { .art.fight { width: 88px; height: 118px; } }
+header.top a.navlink { color: inherit; font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid color-mix(in srgb, var(--gold) 70%, transparent); color: var(--gold); border-radius: var(--r); padding: 5px 11px; }
+header.top a.navlink:hover { border-color: var(--gold); }

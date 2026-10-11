@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ringside Fighter Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the steps of a new fighter's paperwork on the left, the finished roster card pinned on the right like a sheet on a clipboard. */
+:root {
+  --mat: #E7EAEE; --panel: #F7F8FA; --raised: #FFFFFF; --ink: #151A21; --muted: #5A6472; --line: #CBD2DA;
+  --red: #B42A22; --red-soft: #F6DEDB; --gold: #A9792A; --gold-soft: #F3E7CF; --ok: #2D7A4E; --ok-soft: #DDEFE4; --warn: #A3610B;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --mat: #0F1216; --panel: #171B21; --raised: #1D222A; --ink: #E7EAEE; --muted: #98A2AF; --line: #2B323C;
+  --red: #E0564C; --red-soft: #3A1E1C; --gold: #D6A54E; --gold-soft: #33291A; --ok: #5CB585; --ok-soft: #17301F; --warn: #E0A04A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --mat: #0F1216; --panel: #171B21; --raised: #1D222A; --ink: #E7EAEE; --muted: #98A2AF; --line: #2B323C;
+  --red: #E0564C; --red-soft: #3A1E1C; --gold: #D6A54E; --gold-soft: #33291A; --ok: #5CB585; --ok-soft: #17301F; --warn: #E0A04A; color-scheme: dark }
+* { box-sizing: border-box; }
+html, body { background: var(--mat); color: var(--ink); }
+body { font-family: var(--body); font-size: 15px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+header.top { background: var(--ink); color: var(--mat); }
+header.top .wrap { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; padding-block: 14px; }
+.brand { font-family: var(--display); font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: .02em; line-height: 1; }
+.brand span { color: var(--gold); }
+.sub { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; opacity: .75; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; }
+main.wrap { padding-block: 22px 56px; }
+
+h1, h2, h3 { font-family: var(--display); text-transform: uppercase; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 900; line-height: 1; }
+h2 { font-size: 24px; font-weight: 800; }
+h3 { font-size: 18px; font-weight: 800; }
+p { margin: 0; max-width: 65ch; }
+.lede { color: var(--muted); margin-top: 8px; }
+.label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; margin-top: 20px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.steps { display: grid; gap: 14px; min-width: 0; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.step-head { display: flex; gap: 12px; align-items: baseline; }
+.step-no { font-family: var(--display); font-weight: 900; font-size: 30px; line-height: 1; color: var(--gold); min-width: 30px; }
+.step.done .step-no { color: var(--ok); }
+.why { font-size: 14px; color: var(--muted); }
+.tip { font-size: 14px; border-left: 3px solid var(--gold); padding: 6px 10px; background: var(--gold-soft); border-radius: 0 var(--r) var(--r) 0; max-width: 70ch; }
+
+.field { display: grid; gap: 4px; min-width: 0; }
+.field input, .field select, .field textarea { border: 1px solid var(--line); border-radius: var(--r); background: var(--raised); padding: 8px 10px; width: 100%; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+
+.choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.choice { text-align: left; border: 1px solid var(--line); border-radius: var(--r); background: var(--raised); padding: 10px 12px; cursor: pointer; display: grid; gap: 4px; }
+.choice:hover:not(:disabled) { border-color: var(--ink); }
+.choice[aria-pressed="true"] { border-color: var(--red); background: var(--red-soft); box-shadow: inset 0 0 0 1px var(--red); }
+.choice:disabled { opacity: .5; cursor: not-allowed; }
+.choice .name { font-weight: 600; }
+.choice .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.choice .desc { font-size: 13px; color: var(--muted); }
+
+.bands { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; align-items: end; height: 92px; }
+.band { display: grid; gap: 4px; align-content: end; text-align: center; }
+.band .bar { background: var(--line); border-radius: 3px 3px 0 0; }
+.band.on .bar { background: var(--red); }
+.band .bl { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.band.on .bl { color: var(--ink); font-weight: 600; }
+
+.note { font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+.note b { font-family: var(--mono); font-size: 12px; min-width: 18px; }
+.note.ok b { color: var(--ok); } .note.warn b { color: var(--warn); } .note.info b { color: var(--muted); }
+
+/* the sheet */
+.sheet { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); background: var(--raised); border: 1px solid var(--line); border-top: 6px solid var(--red); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+@media (max-width: 900px) { .sheet { position: static; } }
+.sheet-name { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: 1; overflow-wrap: anywhere; }
+.chip { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); white-space: nowrap; }
+.chip.gold { border-color: var(--gold); color: var(--gold); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.kv { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 10px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.meter { height: 12px; border-radius: 3px; border: 1px solid var(--line); background: var(--mat); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--red); }
+.checks { display: grid; gap: 4px; border-top: 1px dashed var(--line); padding-top: 10px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r); border: 1px solid var(--line); background: var(--raised); padding: 8px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover:not(:disabled) { border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--ink); color: var(--mat); border-color: var(--ink); }
+.btn.small { padding: 4px 9px; font-size: 13px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.out { width: 100%; font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); padding: 8px; color: var(--ink); resize: vertical; min-height: 64px; }
+.example { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: var(--r); border: 1px solid var(--gold); background: var(--gold-soft); margin-top: 16px; font-size: 14px; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+td.num { font-family: var(--mono); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--mat); padding: 9px 14px; border-radius: var(--r); font-size: 14px; z-index: 10; max-width: calc(100% - 32px); }
+header.top a.navlink { margin-left: auto; color: inherit; font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid color-mix(in srgb, var(--mat) 40%, transparent); border-radius: var(--r); padding: 5px 11px; }
+header.top a.navlink:hover { border-color: var(--mat); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap"><div class="brand">Ringside <span>Desk</span></div><div class="sub">Fighter builder</div><a class="navlink" href="index.html">Back to the fight desk</a></div></header>
+
+<main class="wrap">
+  <h1>Build a new fighter</h1>
+  <p class="lede">Every new fighter starts with one style, one trait and two skills, all at Tier I. Work down the steps and the card on the right fills in. When it's done, copy the row and send it to the league owner, who adds it to the Roster tab.</p>
+  <div class="example" id="exampleBar" hidden>
+    <span>This is an example build so you can see a finished sheet. Change anything, or start from a blank sheet.</span>
+    <button class="btn small" id="startBlank" type="button">Start blank</button>
+  </div>
+
+  <div class="layout">
+    <div class="steps">
+
+      <section class="step" id="s1">
+        <div class="step-head"><span class="step-no">1</span><h2>Name and stable</h2></div>
+        <div class="grid2">
+          <div class="field"><label class="label" for="f-name">Fighter name</label><input id="f-name" type="text" autocomplete="off" placeholder="Name as it appears on the roster"></div>
+          <div class="field"><label class="label" for="f-stable">Stable</label><input id="f-stable" type="text" autocomplete="off" placeholder="Your stable's name"></div>
+        </div>
+        <p class="why">The league owner checks names against the roster, so use the one you'll write her under.</p>
+      </section>
+
+      <section class="step" id="s2">
+        <div class="step-head"><span class="step-no">2</span><h2>Size band</h2></div>
+        <p class="why">Size is a band from 1 to 5. It only matters for the Massive trait, which gives +1 on every roll against an opponent two or more bands smaller. Enter her size in cc to find her band, or pick the band directly.</p>
+        <div class="grid2">
+          <div class="field"><label class="label" for="f-cc">Size in cc (1,200–5,000)</label><input id="f-cc" type="number" min="1200" max="5000" step="50" placeholder="e.g. 2600"></div>
+          <div class="field"><label class="label" for="f-band">Band</label>
+            <select id="f-band"><option value="1">1 · 1,200–2,149 cc</option><option value="2">2 · 2,150–2,799 cc</option><option value="3">3 · 2,800–3,399 cc</option><option value="4">4 · 3,400–4,049 cc</option><option value="5">5 · 4,050–5,000 cc</option></select></div>
+        </div>
+        <div class="bands" id="bands" aria-label="How common each band is"></div>
+        <p class="why">Bands follow a bell curve: most fighters sit in band 3, a quarter each in bands 2 and 4, and only the extremes reach 1 or 5.</p>
+      </section>
+
+      <section class="step" id="s3">
+        <div class="step-head"><span class="step-no">3</span><h2>Style</h2></div>
+        <p class="why">Her style is the biggest number on her sheet: +1 on every roll in her home match at Tier I, rising to +3 at Tier III. In testing, a style alone won about 73% of fights against an identical fighter without one. The home match is also the one she picks when she sets the match type, and it decides which condition she takes when she loses.</p>
+        <div class="choices" id="styles"></div>
+        <p class="tip">Hybrid styles (Amazon, Harpy, Siren, Nymph) and Champion aren't available at creation. A hybrid needs two base styles first; Champion needs the title.</p>
+      </section>
+
+      <section class="step" id="s4">
+        <div class="step-head"><span class="step-no">4</span><h2>Trait</h2></div>
+        <p class="why">Pick one trait. It's on for the whole fight. Most traits key off a roll's tag: the match type's tag plus the tag of any skill used that roll. The note under each trait says how often it will fire for the style you picked.</p>
+        <div class="choices" id="traits"></div>
+      </section>
+
+      <section class="step" id="s5">
+        <div class="step-head"><span class="step-no">5</span><h2>Two skills</h2></div>
+        <p class="why">Pick two Tier I skills. Each is used once per fight and stacks with her style. Skills that share her home tag also wake up tag-based traits, and some skills only work after another one.</p>
+        <div class="choices" id="skills"></div>
+      </section>
+
+      <section class="step" id="s6">
+        <div class="step-head"><span class="step-no">6</span><h2>Preferred match</h2></div>
+        <p id="prefText" class="why"></p>
+      </section>
+
+      <section class="step" id="s7">
+        <div class="step-head"><span class="step-no">7</span><h2>Art (optional)</h2></div>
+        <p class="why">Four pictures: her roster card, her corner in a fight, her corner at 0 integrity, and a B-KO. Leave any blank and the next one in line is used. Use the file names you'll send the league owner, or full image links.</p>
+        <div class="grid2">
+          <div class="field"><label class="label" for="f-art">Roster art</label><input id="f-art" type="text" autocomplete="off"></div>
+          <div class="field"><label class="label" for="f-fart">Fight art</label><input id="f-fart" type="text" autocomplete="off"></div>
+          <div class="field"><label class="label" for="f-zart">Zero integrity art</label><input id="f-zart" type="text" autocomplete="off"></div>
+          <div class="field"><label class="label" for="f-bart">B-KO art</label><input id="f-bart" type="text" autocomplete="off"></div>
+        </div>
+        <div class="row"><button class="btn small" id="suggestArt" type="button">Suggest file names from her name</button></div>
+        <div class="field"><label class="label" for="f-notes">Notes for the league owner</label><input id="f-notes" type="text" autocomplete="off"></div>
+      </section>
+
+      <section class="step" id="s8">
+        <div class="step-head"><span class="step-no">8</span><h2>Send it in</h2></div>
+        <p class="why">The roster row pastes straight into the next empty row of the Roster tab, in the template's column order. The summary is for a message to the league owner.</p>
+        <div class="field"><span class="label">Roster row</span><textarea class="out" id="outRow" readonly rows="2"></textarea></div>
+        <div class="row"><button class="btn primary" id="copyRow" type="button">Copy roster row</button><button class="btn" id="copySummary" type="button">Copy summary</button></div>
+        <div class="field"><span class="label">Summary</span><textarea class="out" id="outSummary" readonly rows="7"></textarea></div>
+      </section>
+
+      <section class="step" id="s9">
+        <div class="step-head"><span class="step-no">→</span><h2>After her first fight</h2></div>
+        <p class="why">She earns XP from fights and spends it on upgrades. Lifetime XP sets her tier, and her tier sets how much she can bring into a fight.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Buy</th><th>XP</th></tr></thead>
+          <tbody>
+            <tr><td>New skill (Finisher included, Veteran or higher)</td><td class="num">4</td></tr>
+            <tr><td>New base style</td><td class="num">6</td></tr>
+            <tr><td>Hybrid style (needs both base styles)</td><td class="num">4</td></tr>
+            <tr><td>New trait (up to 3 total)</td><td class="num">8</td></tr>
+            <tr><td>Raise a skill or style to Tier II / III / IV</td><td class="num">8 / 16 / 32</td></tr>
+          </tbody></table></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Tier</th><th>Lifetime XP</th><th>Brings per fight</th></tr></thead>
+          <tbody>
+            <tr><td>Amateur</td><td class="num">0</td><td>3 skills (styles count) · 1 trait</td></tr>
+            <tr><td>Veteran</td><td class="num">16</td><td>5 skills · 2 traits · can use a Finisher</td></tr>
+            <tr><td>Warmaid</td><td class="num">40</td><td>7 skills · 3 traits · Finisher is an automatic B-KO</td></tr>
+          </tbody></table></div>
+        <p class="tip">Raising her style is the best buy early. Style II costs 8 XP and adds +1 to every roll in her home match, while a skill upgrade adds +1 to a single roll.</p>
+      </section>
+    </div>
+
+    <aside class="sheet" aria-label="Character sheet preview">
+      <div class="row" style="justify-content:space-between"><span class="label">Roster card</span><span class="chips"><span class="chip gold">Amateur</span></span></div>
+      <div class="sheet-name" id="pvName">Unnamed</div>
+      <div class="muted" id="pvStable"></div>
+      <div>
+        <div class="row" style="justify-content:space-between"><span class="label">Integrity</span><span class="num" id="pvInt">100 / 100</span></div>
+        <div class="meter"><i style="width:100%"></i></div>
+      </div>
+      <dl class="kv">
+        <dt>Style</dt><dd id="pvStyle">—</dd>
+        <dt>Prefers</dt><dd id="pvPref">—</dd>
+        <dt>Trait</dt><dd id="pvTrait">—</dd>
+        <dt>Skills</dt><dd id="pvSkills">—</dd>
+        <dt>Size</dt><dd id="pvSize">—</dd>
+        <dt>Loses to</dt><dd id="pvCond">—</dd>
+        <dt>XP</dt><dd class="num">0 to spend · 0 lifetime</dd>
+      </dl>
+      <div class="checks" id="checks" aria-live="polite"></div>
+    </aside>
+  </div>
+</main>
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<script>
+const ROMAN = ["", "I", "II", "III", "IV"];
+const STYLES = {
+  "Titboxer":   { match: "Titboxing",   tag: "Batter",  cond: "Busted" },
+  "Titfighter": { match: "Titfight",    tag: "Squeeze", cond: "Crushed" },
+  "Duelist":    { match: "Nipple Duel", tag: "Fence",   cond: "Softened" },
+  "Sexfighter": { match: "Sexfight",    tag: "Erotic",  cond: "Over Stimulated" }
+};
+const TAG_MATCH = { Batter: "Titboxing", Squeeze: "Titfight", Fence: "Nipple Duel", Erotic: "Sexfight" };
+const SKILLS = {
+  "Bash":       { tag: "Batter",  text: "+3 to one roll. The opponent gains Sore I (−1 on her next roll)." },
+  "Busted":     { tag: "Squeeze", text: "+3 to +5 to one roll, depending on the die. A natural 1 gives no bonus and raises your own condition chance; a 10 raises hers." },
+  "Flick":      { tag: "Fence",   text: "+1 to one roll. Combo 1: sets up Skewer.", combo1: true },
+  "Skewer":     { tag: "Fence",   text: "+2 and Sore I. Only right after a Combo 1 (Flick, Rub or Tease).", needs: ["Flick", "Rub", "Tease"] },
+  "Rub":        { tag: "Squeeze", text: "+0 to +4 depending on the die. Combo 1: sets up Skewer or Submission.", combo1: true },
+  "Submission": { tag: "",        text: "+0 on a 1–6, +5 on a 7–10. Only right after Rub or Tease.", needs: ["Rub", "Tease"] },
+  "Tease":      { tag: "Erotic",  text: "+2 that can land on you, both of you, or her, depending on the die. Combo 1.", combo1: true },
+  "Slam":       { tag: "Batter",  text: "No roll: the die counts as 5. The opponent gains Sore I. Can't Double Tap." },
+  "Finisher":   { tag: "",        text: "Ends a fight once the opponent is at 0. Veteran or higher.", locked: true }
+};
+const TRAITS = {
+  "Dense Implants":    { off: "Batter", def: "Batter", text: "+2 once on a Batter roll; −1 to the opponent's Batter rolls. +10% condition chance." },
+  "Tough Tits":        { def: "Squeeze", text: "−1 to the opponent's Squeeze rolls." },
+  "Thick Nipples":     { def: "Fence", text: "−1 to the opponent's Fence rolls." },
+  "Pain Slut":         { def: "Erotic", text: "−1 to the opponent's Erotic rolls." },
+  "Flexible Implants": { def: "Batter", text: "−1 to the opponent's Batter rolls. +20% condition chance if beaten by a Squeeze roll." },
+  "Bulging":           { off: "Squeeze", text: "+1 on every Squeeze roll. +20% condition chance once used." },
+  "Stiff Tips":        { off: "Fence", text: "+1 on every Fence roll. +20% condition chance once used." },
+  "Thirsty":           { off: "Erotic", text: "+1 on every Erotic roll. +20% condition chance if beaten by an Erotic roll." },
+  "Conditioning":      { text: "+10 maximum integrity. Always on." },
+  "Massive":           { text: "+1 on every roll against an opponent 2+ size bands smaller." }
+};
+const BAND_SHARE = [7, 24, 38, 24, 7];
+const BAND_RANGES = [[1200, 2149], [2150, 2799], [2800, 3399], [3400, 4049], [4050, 5000]];
+const EXAMPLE = { name: "Example fighter", stable: "Example stable", cc: 2600, band: 2, style: "Titboxer", trait: "Dense Implants", skills: ["Bash", "Busted"], art: "", fart: "", zart: "", bart: "", notes: "", example: true };
+const BLANK = { name: "", stable: "", cc: "", band: 3, style: "", trait: "", skills: [], art: "", fart: "", zart: "", bart: "", notes: "", example: false };
+
+const $ = s => document.querySelector(s);
+const store = {
+  get() { try { const v = localStorage.getItem("fighter-builder"); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set(v) { try { localStorage.setItem("fighter-builder", JSON.stringify(v)); } catch { } }
+};
+let S = Object.assign({}, BLANK, store.get() || EXAMPLE);
+let toastTimer;
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3000); }
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (k === "class") e.className = v; else e.setAttribute(k, v === true ? "" : v);
+  }
+  kids.flat().forEach(k => k != null && k !== false && e.append(k instanceof Node ? k : document.createTextNode(String(k))));
+  return e;
+}
+function save(patch) { Object.assign(S, patch, { example: false }); store.set(S); render(); }
+function bandForCc(cc) { const n = +cc; if (!n) return null; const i = BAND_RANGES.findIndex(([a, b]) => n >= a && n <= b); return i >= 0 ? i + 1 : (n < 1200 ? 1 : 5); }
+
+/** How the chosen trait plays with the chosen style and skills. */
+function traitNote(trait, style, skills) {
+  const t = TRAITS[trait], st = STYLES[style]; if (!t) return "";
+  if (trait === "Conditioning") return "Works in every match: 110 integrity instead of 100.";
+  if (trait === "Massive") return S.band <= 2 ? `At band ${S.band} she's never 2 bands bigger than anyone, so Massive won't fire.` : `At band ${S.band}, fires against bands ${S.band - 2 === 1 ? "1" : "1–" + (S.band - 2)}.`;
+  if (!st) return "Pick a style to see how often this fires.";
+  const parts = [];
+  if (t.off) {
+    const viaSkills = skills.filter(k => SKILLS[k] && SKILLS[k].tag === t.off);
+    if (t.off === st.tag) parts.push(trait === "Dense Implants" ? "Its +2 lands on her first roll at home." : "Fires on every roll in her home match.");
+    else if (viaSkills.length) parts.push(`At home, fires only on rolls where she uses ${viaSkills.join(" or ")}.`);
+    else parts.push(`Won't fire in her home match. It needs ${TAG_MATCH[t.off]} matches or ${t.off} skills.`);
+  }
+  if (t.def) parts.push(t.def === st.tag ? `Its −1 applies to every roll an opponent makes against her at home.` : `Its −1 applies in ${TAG_MATCH[t.def]} matches and against ${t.def} skills.`);
+  return parts.join(" ");
+}
+function skillNote(name, skills) {
+  const s = SKILLS[name];
+  if (s.needs && !skills.some(k => s.needs.includes(k) && k !== name)) return `Needs ${s.needs.join(", ").replace(/, ([^,]*)$/, " or $1")} as her other skill, or it can never be used.`;
+  return "";
+}
+
+function renderBands() {
+  const box = $("#bands"); box.replaceChildren();
+  BAND_SHARE.forEach((p, i) => box.append(el("div", { class: "band" + (S.band === i + 1 ? " on" : "") },
+    el("div", { class: "bar", style: `height:${Math.round(p / 38 * 60) + 4}px` }), el("div", { class: "bl" }, `${i + 1} · ${p}%`))));
+}
+function renderStyles() {
+  const box = $("#styles"); box.replaceChildren();
+  for (const [name, st] of Object.entries(STYLES)) box.append(el("button", { class: "choice", type: "button", "aria-pressed": String(S.style === name), onclick: () => save({ style: name }) },
+    el("span", { class: "name" }, `${name} I`), el("span", { class: "meta" }, `${st.match} · ${st.tag}`),
+    el("span", { class: "desc" }, `+1 every roll in a ${st.match}. Loses take ${st.cond}.`)));
+}
+function renderTraits() {
+  const box = $("#traits"); box.replaceChildren();
+  for (const [name, t] of Object.entries(TRAITS)) box.append(el("button", { class: "choice", type: "button", "aria-pressed": String(S.trait === name), onclick: () => save({ trait: name }) },
+    el("span", { class: "name" }, name), el("span", { class: "desc" }, t.text),
+    S.style || name === "Conditioning" || name === "Massive" ? el("span", { class: "desc", style: "color:var(--ink)" }, traitNote(name, S.style, S.skills)) : null));
+}
+function renderSkills() {
+  const box = $("#skills"); box.replaceChildren();
+  for (const [name, s] of Object.entries(SKILLS)) {
+    const on = S.skills.includes(name), full = S.skills.length >= 2 && !on;
+    box.append(el("button", { class: "choice", type: "button", disabled: s.locked || full, "aria-pressed": String(on),
+      onclick: () => save({ skills: on ? S.skills.filter(k => k !== name) : S.skills.concat(name) }) },
+      el("span", { class: "name" }, s.locked ? name : `${name} I`),
+      el("span", { class: "meta" }, s.locked ? "Veteran or higher" : (s.tag ? `${s.tag}${S.style && STYLES[S.style].tag === s.tag ? " · her home tag" : ""}` : "No tag")),
+      el("span", { class: "desc" }, s.text)));
+  }
+}
+function checks() {
+  const out = [], st = STYLES[S.style];
+  out.push(S.name.trim() ? ["ok", "Named"] : ["warn", "Give her a name."]);
+  out.push(st ? ["ok", `Style: ${S.style} I`] : ["warn", "Pick a style."]);
+  out.push(S.trait ? ["ok", `Trait: ${S.trait}`] : ["warn", "Pick a trait."]);
+  out.push(S.skills.length === 2 ? ["ok", "Two skills"] : ["warn", `Pick ${2 - S.skills.length} more skill${S.skills.length === 1 ? "" : "s"}.`]);
+  for (const k of S.skills) { const n = skillNote(k, S.skills); if (n) out.push(["warn", `${k}: ${n}`]); }
+  if (S.trait && st) {
+    const t = TRAITS[S.trait];
+    if (t.off && t.off !== st.tag && !S.skills.some(k => SKILLS[k].tag === t.off)) out.push(["warn", `${S.trait} won't fire in her home match. Consider a ${t.off} skill or a different trait.`]);
+    if (S.trait === "Massive" && S.band <= 2) out.push(["warn", "Massive never fires at band 1 or 2."]);
+  }
+  if (S.skills.includes("Slam")) out.push(["info", "Slam trades the die for a flat 5. It's mainly worth it for the Sore."]);
+  if (S.skills.includes("Tease")) out.push(["info", "Tease can hand its bonus to the opponent on a 1–3."]);
+  out.push(["info", "Fits an Amateur's loadout: 3 skills including her style, and 1 trait."]);
+  return out;
+}
+function rowValues() {
+  const maxI = S.trait === "Conditioning" ? 110 : 100, st = STYLES[S.style];
+  return [S.name.trim(), S.stable.trim(), S.band, S.style, S.style ? "I" : "", st ? st.match : "", S.trait ? (S.trait === "Conditioning" ? "Conditioning I" : S.trait) : "",
+    S.skills.map(k => `${k} I`).join("; "), maxI, "", "", 0, 0, 0, 0, "", S.art.trim(), S.fart.trim(), S.zart.trim(), S.bart.trim(), S.notes.trim()];
+}
+function summary() {
+  const st = STYLES[S.style];
+  return [`New fighter: ${S.name.trim() || "(no name yet)"}${S.stable.trim() ? " · " + S.stable.trim() : ""}`,
+    `Style: ${S.style ? S.style + " I" : "—"}${st ? ` (prefers ${st.match})` : ""}`, `Trait: ${S.trait || "—"}`,
+    `Skills: ${S.skills.map(k => k + " I").join(", ") || "—"}`, `Size: band ${S.band}${S.cc ? ` (${S.cc} cc)` : ""}`,
+    `Integrity: ${S.trait === "Conditioning" ? 110 : 100}`,
+    `Art: ${[S.art, S.fart, S.zart, S.bart].map(x => x.trim() || "—").join(" / ")}`, S.notes.trim() ? `Notes: ${S.notes.trim()}` : ""].filter(Boolean).join("\n");
+}
+function render() {
+  $("#exampleBar").hidden = !S.example;
+  for (const [id, k] of [["#f-name", "name"], ["#f-stable", "stable"], ["#f-cc", "cc"], ["#f-art", "art"], ["#f-fart", "fart"], ["#f-zart", "zart"], ["#f-bart", "bart"], ["#f-notes", "notes"]]) {
+    const i = $(id); if (document.activeElement !== i) i.value = S[k] ?? "";
+  }
+  $("#f-band").value = String(S.band);
+  renderBands(); renderStyles(); renderTraits(); renderSkills();
+  const st = STYLES[S.style];
+  $("#prefText").textContent = st ? `With one style, her preferred match is ${st.match}. That's the match type she picks when she sets it, and losses give her ${st.cond}. Once she owns more styles or a hybrid, she can choose any match type her styles cover.` : "Pick a style first. Her preferred match comes from it.";
+  const maxI = S.trait === "Conditioning" ? 110 : 100;
+  $("#pvName").textContent = S.name.trim() || "Unnamed";
+  $("#pvStable").textContent = S.stable.trim() || "No stable yet";
+  $("#pvInt").textContent = `${maxI} / ${maxI}`;
+  $("#pvStyle").textContent = S.style ? `${S.style} I` : "—";
+  $("#pvPref").textContent = st ? st.match : "—";
+  $("#pvTrait").textContent = S.trait || "—";
+  $("#pvSkills").textContent = S.skills.map(k => k + " I").join(", ") || "—";
+  $("#pvSize").textContent = `Band ${S.band}${S.cc ? ` · ${S.cc} cc` : ""}`;
+  $("#pvCond").textContent = st ? st.cond : "—";
+  const box = $("#checks"); box.replaceChildren(el("span", { class: "label" }, "Build check"));
+  checks().forEach(([k, t]) => box.append(el("div", { class: "note " + k }, el("b", {}, k === "ok" ? "✓" : k === "warn" ? "!" : "i"), el("span", {}, t))));
+  $("#outRow").value = rowValues().join("\t");
+  $("#outSummary").value = summary();
+  const done = [!!S.name.trim(), true, !!S.style, !!S.trait, S.skills.length === 2, !!S.style, true, S.style && S.trait && S.skills.length === 2 && S.name.trim()];
+  ["#s1", "#s2", "#s3", "#s4", "#s5", "#s6", "#s7", "#s8"].forEach((id, i) => $(id).classList.toggle("done", !!done[i]));
+}
+const bind = (id, key, fn) => $(id).addEventListener("input", e => save(Object.assign({ [key]: e.target.value }, fn ? fn(e.target.value) : {})));
+bind("#f-name", "name"); bind("#f-stable", "stable"); bind("#f-art", "art"); bind("#f-fart", "fart"); bind("#f-zart", "zart"); bind("#f-bart", "bart"); bind("#f-notes", "notes");
+bind("#f-cc", "cc", v => { const b = bandForCc(v); return b ? { band: b } : {}; });
+$("#f-band").addEventListener("change", e => save({ band: +e.target.value }));
+$("#startBlank").addEventListener("click", () => { S = Object.assign({}, BLANK); store.set(S); render(); toast("Blank sheet ready"); });
+$("#suggestArt").addEventListener("click", () => {
+  const slug = (S.name.trim() || "fighter").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "fighter";
+  save({ art: `${slug}.jpg`, fart: `${slug}-fight.jpg`, zart: `${slug}-zero.jpg`, bart: `${slug}-bko.jpg` });
+});
+async function copy(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(`${what} copied`); }
+  catch { const t = what === "Roster row" ? $("#outRow") : $("#outSummary"); t.focus(); t.select(); toast("Press Ctrl+C or Cmd+C to copy the selected text"); }
+}
+$("#copyRow").addEventListener("click", () => copy($("#outRow").value, "Roster row"));
+$("#copySummary").addEventListener("click", () => copy($("#outSummary").value, "Summary"));
+render();
+</script>
+
+</body>
+</html>

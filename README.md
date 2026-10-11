@@ -6,7 +6,8 @@ A fight table for the league. Players pick two fighters, choose a skill and trai
 
 | File | What it is |
 |---|---|
-| `index.html` | The page |
+| `index.html` | The fight desk |
+| `builder.html` | The new fighter guide: walks a player through building a fighter and gives them a roster row to send you |
 | `config.js` | The one file you edit: your sheet links and default settings |
 | `js/engine.js` | The fight rules |
 | `js/sheet.js` | Reads the roster from the sheet |
@@ -41,7 +42,10 @@ A fight table for the league. Players pick two fighters, choose a skill and trai
 | Lifetime XP | Total XP earned. Sets Amateur, Veteran or Warmaid | `19` |
 | Wins, Losses | Record | `4`, `2` |
 | Last Result | `W` or `L`. Sets the recovery amount | `W` |
-| Art | A file name in `art/`, or a full image link | `n07.jpg` |
+| Art | Roster photo: a file name in `art/`, or a full image link | `n07.jpg` |
+| Fight Art | Shown in her corner during a fight. Blank uses Art | `n07-fight.jpg` |
+| Zero Art | Shown in her corner once she's at 0 integrity. Blank uses Fight Art | `n07-zero.jpg` |
+| B-KO Art | Shown in her corner when she's B-KO'd, and on her roster card while B-KO is `Y`. Blank uses Zero Art | `n07-bko.jpg` |
 | Notes | Anything else. Shown on the card | |
 
 If a cell can't be read, such as a misspelled skill, the fighter still loads and her card on the Roster tab says which cell to fix.
@@ -81,9 +85,20 @@ To change settings later, edit `config.js` on GitHub (the pencil icon) and commi
 
 ## 4. Add character art
 
-Put image files in `art/` and type the file name in the fighter's Art column, for example `n07.jpg`. A full `https://` link also works. JPG, PNG and WebP all work; around 600×800 keeps the page quick. A fighter with no art shows her name instead.
+Each fighter can have four pictures, one per column:
 
-Check GitHub's acceptable-use policies for what art can be hosted on GitHub Pages before you upload. If they don't fit, host the images elsewhere and put full links in the Art column.
+| Column | When it shows |
+|---|---|
+| Art | Her roster card |
+| Fight Art | Her corner during a fight |
+| Zero Art | Her corner once she's at 0 integrity |
+| B-KO Art | Her corner when a fight ends in her B-KO, and her roster card while she's B-KO'd |
+
+Put the image files in `art/` and type each file name in its column, or paste a full `https://` link. A naming pattern like `n07.jpg`, `n07-fight.jpg`, `n07-zero.jpg` and `n07-bko.jpg` keeps them easy to manage. A blank cell, or a file that won't load, falls back to the next picture in the chain (B-KO → Zero → Fight → Art), and a fighter with no art shows her name instead.
+
+Fight pictures are shown as a 3:4 portrait, so around 600×800 works well for all four. JPG, PNG and WebP all work.
+
+Check GitHub's acceptable-use policies for what art can be hosted on GitHub Pages before you upload. If they don't fit, host the images elsewhere and put full links in the art columns.
 
 ## Running the league
 
